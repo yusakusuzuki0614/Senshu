@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="木材検収">
+<meta name="theme-color" content="#E87722">
+<title>アメリカ屋 木材検収アプリ</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  html, body {
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    background: #FFF8F0;
+    color: #282828;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    min-height: 100vh;
+  }
+  :root {
+    --orange: #E87722;
+    --orange-dark: #B45414;
+    --orange-bg: #FFF4E6;
+    --gray: #777;
+    --light-gray: #EAEAEA;
+    --red: #D9534F;
+  }
+  .header {
+    background: #E87722;
+    color: white;
+    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header h1 { font-size: 17px; }
+  .header-btn {
+    background: rgba(255,255,255,0.2);
+    color: white; border: none; padding: 8px 12px;
+    border-radius: 6px; font-size: 14px;
+    min-height: 36px;
+    cursor: pointer;
+  }
+  .header-side { width: 80px; }
+  .view { padding: 16px; display: none; }
+  .view.active { display: block; }
+
+  .form-row { margin-bottom: 14px; }
+  .form-label {
+    font-size: 13px; color: #777;
+    margin-bottom: 4px; display: block; font-weight: bold;
+  }
+  .form-input, .form-select {
+    width: 100%; padding: 12px 14px;
+    border: 2px solid #EAEAEA;
+    border-radius: 8px; font-size: 17px;
+    background: white; min-height: 48px;
+    -webkit-appearance: none; appearance: none;
+    font-family: inherit;
+  }
+  .form-input:focus, .form-select:focus {
+    outline: none; border-color: #E87722;
+  }
+  .btn {
+    display: inline-block; padding: 14px 20px;
+    border: none; border-radius: 10px;
+    font-size: 16px; font-weight: bold;
+    min-height: 52px; cursor: pointer;
+    font-family: inherit;
+  }
+  .btn:active { transform: scale(0.96); opacity: 0.85; }
+  .btn-primary { background: #E87722; color: white; }
+  .btn-secondary { background: white; color: #B45414; border: 2px solid #E87722; }
+  .btn-danger { background: #D9534F; color: white; }
+  .btn-full { width: 100%; }
+
+  .length-selector {
+    display: flex; gap: 8px;
+    background: #FFF4E6;
+    padding: 8px; border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .length-btn {
+    flex: 1; background: white;
+    border: 2px solid transparent;
+    padding: 14px 8px; border-radius: 8px;
+    font-size: 18px; font-weight: bold;
+    color: #B45414;
+    min-height: 56px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .length-btn.active {
+    background: #E87722;
+    color: white;
+    border-color: #B45414;
+  }
+
+  .diameter-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 80px;
+    gap: 8px;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    min-height: 70px;
+    position: relative;
+  }
+  .diameter-row.has-count {
+    border-left: 4px solid #E87722;
+  }
+  .diameter-label {
+    background: #FFF4E6;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: bold;
+    color: #B45414;
+  }
+  .count-display {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 8px;
+  }
+  .count-number {
+    font-size: 28px; font-weight: bold;
+    line-height: 1;
+  }
+  .count-volume {
+    font-size: 13px; color: #777; margin-top: 2px;
+  }
+  .count-tap {
+    background: #E87722;
+    color: white;
+    border: none;
+    font-size: 28px; font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .count-tap:active { background: #B45414; }
+  .count-minus {
+    position: absolute;
+    top: 4px; right: 86px;
+    background: rgba(217, 83, 79, 0.85);
+    color: white; border: none;
+    width: 28px; height: 28px;
+    border-radius: 14px;
+    font-size: 16px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .summary-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: white;
+    border-top: 2px solid #E87722;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+    z-index: 50;
+  }
+  .summary-row {
+    display: flex; justify-content: space-around;
+    margin-bottom: 8px;
+  }
+  .summary-item { text-align: center; }
+  .summary-label { font-size: 11px; color: #777; }
+  .summary-value {
+    font-size: 22px; font-weight: bold;
+    color: #B45414; line-height: 1.1;
+  }
+  .summary-actions { display: flex; gap: 8px; }
+  .summary-actions .btn { flex: 1; min-height: 44px; font-size: 14px; padding: 10px; }
+  .view-count { padding-bottom: 160px; }
+
+  .result-section {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .result-section h2 {
+    font-size: 16px; margin-bottom: 12px;
+    color: #B45414;
+    border-bottom: 2px solid #FFF4E6;
+    padding-bottom: 8px;
+  }
+  .result-meta {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+    font-size: 14px;
+  }
+  .result-meta dt { color: #777; font-size: 12px; }
+  .result-meta dd { font-weight: bold; margin-bottom: 8px; }
+  .result-table {
+    width: 100%; border-collapse: collapse; font-size: 14px;
+  }
+  .result-table th, .result-table td {
+    border: 1px solid #EAEAEA;
+    padding: 8px 6px; text-align: center;
+  }
+  .result-table th {
+    background: #E87722; color: white; font-size: 12px;
+  }
+  .result-table tr.total td {
+    background: #FFF4E6;
+    font-weight: bold;
+    color: #B45414;
+  }
+
+  .history-item {
+    background: white; padding: 14px;
+    border-radius: 10px; margin-bottom: 10px;
+    cursor: pointer;
+  }
+  .history-item:active { background: #FFF4E6; }
+  .history-title { font-weight: bold; font-size: 15px; }
+  .history-meta { font-size: 12px; color: #777; margin-top: 4px; }
+  .history-stat {
+    display: flex; justify-content: space-between;
+    margin-top: 8px; font-size: 13px;
+  }
+  .history-stat strong { color: #B45414; }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none; align-items: flex-end;
+    z-index: 200;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: white;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal-handle {
+    width: 40px; height: 4px;
+    background: #EAEAEA;
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+
+  .empty {
+    text-align: center; padding: 60px 20px;
+    color: #777;
+  }
+  .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+
+  .toast {
+    position: fixed; top: 80px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(40,40,40,0.92);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    z-index: 300;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  .small-text { font-size: 13px; color: #777; }
+  .center { text-align: center; }
+  .mb-20 { margin-bottom: 20px; }
+  .mt-20 { margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<!-- ヘッダ -->
+<div class="header">
+  <div class="header-side" id="header-left"></div>
+  <h1 id="header-title">木材検収</h1>
+  <div class="header-side" id="header-right" style="text-align: right;"></div>
+</div>
+
+<!-- ホーム画面 -->
+<div id="view-home" class="view active">
+  <button class="btn btn-primary btn-full mb-20" id="btn-new">
+    ＋ 新規検収を開始
+  </button>
+  <h3 class="small-text mb-20" style="font-weight: bold;">📋 検収履歴 <span id="history-count">(0件)</span></h3>
+  <div id="history-list"></div>
+</div>
+
+<!-- カウント画面 -->
+<div id="view-count" class="view view-count">
+  <div class="small-text center mb-20" id="count-meta"></div>
+  <div class="length-selector" id="length-selector"></div>
+  <div id="diameter-grid"></div>
+</div>
+
+<!-- 集計バー -->
+<div class="summary-bar" id="summary-bar" style="display:none;">
+  <div class="summary-row">
+    <div class="summary-item">
+      <div class="summary-label">合計本数</div>
+      <div class="summary-value"><span id="total-count">0</span><span style="font-size:14px;">本</span></div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">合計材積</div>
+      <div class="summary-value"><span id="total-volume">0.000</span><span style="font-size:14px;"> ㎥</span></div>
+    </div>
+  </div>
+  <div class="summary-actions">
+    <button class="btn btn-secondary" id="btn-result">📊 集計結果</button>
+  </div>
+</div>
+
+<!-- 結果画面 -->
+<div id="view-result" class="view">
+  <div id="result-content"></div>
+</div>
+
+<!-- 設定画面 -->
+<div id="view-settings" class="view">
+  <div class="form-row">
+    <label class="form-label">デフォルト作業者名</label>
+    <input class="form-input" id="settings-worker" placeholder="例: 鈴木">
+  </div>
+  <div class="form-row">
+    <label class="form-label">デフォルト樹種</label>
+    <select class="form-select" id="settings-species">
+      <option>杉（スギ）</option>
+      <option>桧（ヒノキ）</option>
+      <option>松（マツ）</option>
+      <option>唐松（カラマツ）</option>
+      <option>その他</option>
+    </select>
+  </div>
+  <button class="btn btn-primary btn-full" id="btn-save-settings">設定を保存</button>
+  <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+  <h3 class="small-text" style="font-weight: bold;">データ管理</h3>
+  <button class="btn btn-danger btn-full mt-20" id="btn-clear-all">🗑 すべての検収記録を削除</button>
+  <div class="small-text center" style="margin-top: 30px;">
+    アメリカ屋木材検収アプリ v1.1<br>株式会社アメリカ屋鈴木
+  </div>
+</div>
+
+<!-- 情報モーダル -->
+<div class="modal-overlay" id="info-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 style="margin-bottom: 16px; font-size: 18px;">検収情報</h2>
+    <div class="form-row">
+      <label class="form-label">現場名</label>
+      <input class="form-input" id="info-site" placeholder="例: 国有林古殿論田">
+    </div>
+    <div class="form-row">
+      <label class="form-label">作業者</label>
+      <input class="form-input" id="info-worker" placeholder="例: 鈴木">
+    </div>
+    <div class="form-row">
+      <label class="form-label">樹種</label>
+      <select class="form-select" id="info-species">
+        <option>杉（スギ）</option>
+        <option>桧（ヒノキ）</option>
+        <option>松（マツ）</option>
+        <option>唐松（カラマツ）</option>
+        <option>その他</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">作業日</label>
+      <input type="date" class="form-input" id="info-date">
+    </div>
+    <div class="form-row">
+      <label class="form-label">メモ</label>
+      <input class="form-input" id="info-note" placeholder="任意">
+    </div>
+    <div style="display: flex; gap: 8px; margin-top: 20px;">
+      <button class="btn btn-secondary" style="flex:1;" id="btn-info-cancel">キャンセル</button>
+      <button class="btn btn-primary" style="flex:1;" id="btn-info-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ====== 定数 ======
+var DIAMETERS = [14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40];
+var LENGTHS = [3.0, 4.0, 6.0];
+var STORAGE_KEY = "americaya_kenshu_v1";
+var SETTINGS_KEY = "americaya_settings_v1";
+
+// ====== 状態 ======
+var state = {
+  view: "home",
+  sessions: [],
+  currentId: null,
+  currentLength: 4.0,
+  settings: { defaultWorker: "", defaultSpecies: "杉（スギ）" }
+};
+
+// ====== ユーティリティ ======
+function $(id) { return document.getElementById(id); }
+
+function calcVolume(d, L) {
+  if (L >= 6) {
+    var Ldash = Math.floor(L);
+    var D = d + (Ldash - 4) / 2;
+    return (D * D * Ldash) / 10000;
+  }
+  return (d * d * L) / 10000;
+}
+
+function loadSessions() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+function saveSessions() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.sessions));
+  } catch (e) { /* localStorage使えない環境を許容 */ }
+}
+function loadSettings() {
+  try {
+    var raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : { defaultWorker: "", defaultSpecies: "杉（スギ）" };
+  } catch (e) { return { defaultWorker: "", defaultSpecies: "杉（スギ）" }; }
+}
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+  } catch (e) {}
+}
+
+function newSession() {
+  return {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    worker: state.settings.defaultWorker || "",
+    site: "",
+    species: state.settings.defaultSpecies || "杉（スギ）",
+    date: new Date().toISOString().slice(0, 10),
+    note: "",
+    counts: {}
+  };
+}
+
+function getCurrent() {
+  if (!state.currentId) return null;
+  for (var i = 0; i < state.sessions.length; i++) {
+    if (state.sessions[i].id === state.currentId) return state.sessions[i];
+  }
+  return null;
+}
+
+function summary(s) {
+  var totalCount = 0, totalVolume = 0;
+  var items = [];
+  if (!s || !s.counts) return { totalCount: 0, totalVolume: 0, items: [] };
+  for (var key in s.counts) {
+    var c = s.counts[key];
+    if (c <= 0) continue;
+    var parts = key.split("_");
+    var d = parseInt(parts[0]);
+    var L = parseFloat(parts[1]);
+    var v = calcVolume(d, L) * c;
+    totalCount += c;
+    totalVolume += v;
+    items.push({ d: d, L: L, count: c, volume: v });
+  }
+  items.sort(function(a, b) { return a.d - b.d || a.L - b.L; });
+  return { totalCount: totalCount, totalVolume: totalVolume, items: items };
+}
+
+function toast(msg) {
+  var t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(function() { t.classList.remove("show"); }, 1800);
+}
+
+// ====== ビュー切替 ======
+function switchView(name) {
+  state.view = name;
+  ["home", "count", "result", "settings"].forEach(function(v) {
+    var el = $("view-" + v);
+    if (el) el.classList.toggle("active", v === name);
+  });
+  $("summary-bar").style.display = (name === "count" ? "block" : "none");
+  render();
+}
+
+// ====== レンダラ ======
+function renderHeader() {
+  var title = "木材検収";
+  var left = "", right = "";
+  if (state.view === "home") {
+    right = '<button class="header-btn" onclick="goSettings()">設定</button>';
+  } else if (state.view === "count") {
+    var c = getCurrent();
+    title = (c && c.site) || "(現場名未設定)";
+    left = '<button class="header-btn" onclick="goHome()">← 戻る</button>';
+    right = '<button class="header-btn" onclick="openInfo()">情報</button>';
+  } else if (state.view === "result") {
+    title = "集計結果";
+    left = '<button class="header-btn" onclick="goCount()">← 戻る</button>';
+    right = '<button class="header-btn" onclick="exportCSV()">出力</button>';
+  } else if (state.view === "settings") {
+    title = "設定";
+    left = '<button class="header-btn" onclick="goHome()">← 戻る</button>';
+  }
+  $("header-title").textContent = title;
+  $("header-left").innerHTML = left;
+  $("header-right").innerHTML = right;
+}
+
+function renderHome() {
+  $("history-count").textContent = "(" + state.sessions.length + "件)";
+  var list = $("history-list");
+  if (state.sessions.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div>まだ検収記録がありません</div><div class="small-text" style="margin-top:8px;">「新規検収を開始」から記録を始めてください</div></div>';
+    return;
+  }
+  var sorted = state.sessions.slice().sort(function(a, b) {
+    return b.updatedAt.localeCompare(a.updatedAt);
+  });
+  var html = "";
+  for (var i = 0; i < sorted.length; i++) {
+    var s = sorted[i];
+    var sm = summary(s);
+    html += '<div class="history-item" onclick="openSession(\'' + s.id + '\')">'
+         + '<div class="history-title">' + escapeHtml(s.site || "(現場名未設定)") + '</div>'
+         + '<div class="history-meta">' + s.date + ' ／ ' + escapeHtml(s.species) + ' ／ 作業者: ' + escapeHtml(s.worker || "—") + '</div>'
+         + '<div class="history-stat">'
+         + '<span>本数: <strong>' + sm.totalCount + '本</strong></span>'
+         + '<span>材積: <strong>' + sm.totalVolume.toFixed(3) + '㎥</strong></span>'
+         + '</div></div>';
+  }
+  list.innerHTML = html;
+}
+
+function escapeHtml(s) {
+  if (s == null) return "";
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function renderCount() {
+  var s = getCurrent();
+  if (!s) return;
+  $("count-meta").textContent = s.date + " ／ " + s.species + " ／ 作業者: " + (s.worker || "—");
+
+  // 材長セレクター
+  var sel = $("length-selector");
+  var lhtml = "";
+  for (var i = 0; i < LENGTHS.length; i++) {
+    var L = LENGTHS[i];
+    lhtml += '<button class="length-btn' + (Math.abs(state.currentLength - L) < 0.01 ? ' active' : '') + '" onclick="setLength(' + L + ')">' + L.toFixed(1) + 'm</button>';
+  }
+  sel.innerHTML = lhtml;
+
+  // 径級グリッド
+  var grid = $("diameter-grid");
+  var ghtml = "";
+  for (var j = 0; j < DIAMETERS.length; j++) {
+    var d = DIAMETERS[j];
+    var key = d + "_" + state.currentLength.toFixed(1);
+    var c = s.counts[key] || 0;
+    var v = c * calcVolume(d, state.currentLength);
+    ghtml += '<div class="diameter-row' + (c > 0 ? ' has-count' : '') + '">'
+          + '<div class="diameter-label">' + d + 'cm</div>'
+          + '<div class="count-display">'
+          + '<div class="count-number">' + c + '</div>'
+          + '<div class="count-volume">' + v.toFixed(3) + ' ㎥</div>'
+          + '</div>'
+          + '<button class="count-tap" onclick="tap(' + d + ')">+1</button>'
+          + (c > 0 ? '<button class="count-minus" onclick="event.stopPropagation();untap(' + d + ')">−</button>' : '')
+          + '</div>';
+  }
+  grid.innerHTML = ghtml;
+
+  // 集計バー
+  var sm = summary(s);
+  $("total-count").textContent = sm.totalCount;
+  $("total-volume").textContent = sm.totalVolume.toFixed(3);
+}
+
+function renderResult() {
+  var s = getCurrent();
+  if (!s) return;
+  var sm = summary(s);
+
+  // 径×長マトリクス
+  var matrix = {};
+  for (var i = 0; i < DIAMETERS.length; i++) {
+    var d = DIAMETERS[i];
+    matrix[d] = {};
+    for (var j = 0; j < LENGTHS.length; j++) {
+      var key = d + "_" + LENGTHS[j].toFixed(1);
+      matrix[d][LENGTHS[j]] = s.counts[key] || 0;
+    }
+  }
+  var usedD = DIAMETERS.filter(function(d) {
+    return LENGTHS.some(function(L) { return matrix[d][L] > 0; });
+  });
+
+  var html = '<div class="result-section"><h2>検収情報</h2>'
+           + '<dl class="result-meta">'
+           + '<div><dt>現場名</dt><dd>' + escapeHtml(s.site || "—") + '</dd></div>'
+           + '<div><dt>作業者</dt><dd>' + escapeHtml(s.worker || "—") + '</dd></div>'
+           + '<div><dt>樹種</dt><dd>' + escapeHtml(s.species) + '</dd></div>'
+           + '<div><dt>作業日</dt><dd>' + s.date + '</dd></div>'
+           + '</dl>';
+  if (s.note) {
+    html += '<div style="margin-top:12px;padding:10px;background:#FFF4E6;border-radius:6px;font-size:13px;"><strong>メモ:</strong> ' + escapeHtml(s.note) + '</div>';
+  }
+  html += '</div>';
+
+  // 径×長表
+  html += '<div class="result-section"><h2>径級×長級 本数表</h2>';
+  if (usedD.length === 0) {
+    html += '<div class="empty" style="padding:20px;">まだカウントがありません</div>';
+  } else {
+    html += '<table class="result-table"><thead><tr><th>径級</th>';
+    for (var k = 0; k < LENGTHS.length; k++) html += '<th>' + LENGTHS[k].toFixed(1) + 'm</th>';
+    html += '<th>計</th></tr></thead><tbody>';
+    for (var m = 0; m < usedD.length; m++) {
+      var d2 = usedD[m];
+      var rowSum = 0;
+      html += '<tr><td><strong>' + d2 + 'cm</strong></td>';
+      for (var n = 0; n < LENGTHS.length; n++) {
+        var c2 = matrix[d2][LENGTHS[n]];
+        rowSum += c2;
+        html += '<td>' + (c2 || "—") + '</td>';
+      }
+      html += '<td><strong>' + rowSum + '</strong></td></tr>';
+    }
+    // 合計行
+    html += '<tr class="total"><td>合計</td>';
+    for (var p = 0; p < LENGTHS.length; p++) {
+      var colSum = usedD.reduce(function(acc, d) { return acc + matrix[d][LENGTHS[p]]; }, 0);
+      html += '<td>' + colSum + '</td>';
+    }
+    html += '<td>' + sm.totalCount + '</td></tr></tbody></table>';
+  }
+  html += '</div>';
+
+  // 材積集計
+  html += '<div class="result-section"><h2>材積集計</h2>';
+  if (sm.items.length === 0) {
+    html += '<div class="empty" style="padding:20px;">—</div>';
+  } else {
+    html += '<table class="result-table"><thead><tr><th>径級</th><th>材長</th><th>本数</th><th>材積(㎥)</th></tr></thead><tbody>';
+    for (var q = 0; q < sm.items.length; q++) {
+      var it = sm.items[q];
+      html += '<tr><td>' + it.d + 'cm</td><td>' + it.L.toFixed(1) + 'm</td><td>' + it.count + '</td><td>' + it.volume.toFixed(3) + '</td></tr>';
+    }
+    html += '<tr class="total"><td colspan="2">合計</td><td>' + sm.totalCount + '本</td><td>' + sm.totalVolume.toFixed(3) + '㎥</td></tr>';
+    html += '</tbody></table>';
+  }
+  html += '</div>';
+
+  html += '<button class="btn btn-danger btn-full mt-20" onclick="deleteCurrent()">🗑 この記録を削除</button>';
+
+  $("result-content").innerHTML = html;
+}
+
+function renderSettings() {
+  $("settings-worker").value = state.settings.defaultWorker;
+  $("settings-species").value = state.settings.defaultSpecies;
+}
+
+function render() {
+  renderHeader();
+  if (state.view === "home") renderHome();
+  else if (state.view === "count") renderCount();
+  else if (state.view === "result") renderResult();
+  else if (state.view === "settings") renderSettings();
+}
+
+// ====== アクション ======
+function goHome() { switchView("home"); }
+function goCount() { switchView("count"); }
+function goSettings() { switchView("settings"); }
+
+function startNew() {
+  var s = newSession();
+  state.sessions.push(s);
+  state.currentId = s.id;
+  saveSessions();
+  switchView("count");
+  openInfo();
+}
+
+function openSession(id) {
+  state.currentId = id;
+  switchView("count");
+}
+
+function setLength(L) {
+  state.currentLength = L;
+  renderCount();
+}
+
+function tap(d) {
+  var s = getCurrent();
+  if (!s) return;
+  var key = d + "_" + state.currentLength.toFixed(1);
+  s.counts[key] = (s.counts[key] || 0) + 1;
+  s.updatedAt = new Date().toISOString();
+  saveSessions();
+  renderCount();
+}
+
+function untap(d) {
+  var s = getCurrent();
+  if (!s) return;
+  var key = d + "_" + state.currentLength.toFixed(1);
+  var c = s.counts[key] || 0;
+  if (c <= 0) return;
+  if (c === 1) delete s.counts[key];
+  else s.counts[key] = c - 1;
+  s.updatedAt = new Date().toISOString();
+  saveSessions();
+  renderCount();
+}
+
+function openInfo() {
+  var s = getCurrent();
+  if (!s) return;
+  $("info-site").value = s.site || "";
+  $("info-worker").value = s.worker || "";
+  $("info-species").value = s.species;
+  $("info-date").value = s.date;
+  $("info-note").value = s.note || "";
+  $("info-modal").classList.add("active");
+}
+
+function closeInfo() {
+  $("info-modal").classList.remove("active");
+}
+
+function saveInfo() {
+  var s = getCurrent();
+  if (!s) return;
+  s.site = $("info-site").value;
+  s.worker = $("info-worker").value;
+  s.species = $("info-species").value;
+  s.date = $("info-date").value;
+  s.note = $("info-note").value;
+  s.updatedAt = new Date().toISOString();
+  saveSessions();
+  closeInfo();
+  toast("検収情報を保存しました");
+  render();
+}
+
+function deleteCurrent() {
+  if (!confirm("この検収記録を削除します。よろしいですか?")) return;
+  state.sessions = state.sessions.filter(function(s) { return s.id !== state.currentId; });
+  state.currentId = null;
+  saveSessions();
+  toast("記録を削除しました");
+  switchView("home");
+}
+
+function exportCSV() {
+  var s = getCurrent();
+  if (!s) return;
+  var sm = summary(s);
+  var lines = [];
+  lines.push('"アメリカ屋木材検収結果"');
+  lines.push('"現場名","' + (s.site || "") + '"');
+  lines.push('"作業者","' + (s.worker || "") + '"');
+  lines.push('"樹種","' + s.species + '"');
+  lines.push('"作業日","' + s.date + '"');
+  lines.push('"メモ","' + (s.note || "") + '"');
+  lines.push("");
+  lines.push('"No.","末口径(cm)","材長(m)","本数","材積(㎥)"');
+  for (var i = 0; i < sm.items.length; i++) {
+    var it = sm.items[i];
+    lines.push((i + 1) + "," + it.d + "," + it.L.toFixed(1) + "," + it.count + "," + it.volume.toFixed(3));
+  }
+  lines.push("");
+  lines.push('"合計本数","' + sm.totalCount + '"');
+  lines.push('"合計材積(㎥)","' + sm.totalVolume.toFixed(3) + '"');
+
+  var csv = "\uFEFF" + lines.join("\r\n");
+  var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "kenshu_" + (s.site || "site") + "_" + s.date + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast("CSVをダウンロードしました");
+}
+
+function saveSettingsAction() {
+  state.settings.defaultWorker = $("settings-worker").value;
+  state.settings.defaultSpecies = $("settings-species").value;
+  saveSettings();
+  toast("設定を保存しました");
+  goHome();
+}
+
+function clearAll() {
+  if (!confirm("すべての検収記録を削除します。元に戻せません。よろしいですか?")) return;
+  state.sessions = [];
+  saveSessions();
+  toast("すべての記録を削除しました");
+  render();
+}
+
+// ====== イベント ======
+function init() {
+  state.sessions = loadSessions();
+  state.settings = loadSettings();
+  // ボタン
+  $("btn-new").onclick = startNew;
+  $("btn-result").onclick = function() { switchView("result"); };
+  $("btn-info-save").onclick = saveInfo;
+  $("btn-info-cancel").onclick = closeInfo;
+  $("btn-save-settings").onclick = saveSettingsAction;
+  $("btn-clear-all").onclick = clearAll;
+  $("info-modal").addEventListener("click", function(e) {
+    if (e.target === $("info-modal")) closeInfo();
+  });
+  render();
+}
+
+// 公開関数(HTMLからonclickで呼ばれる)
+window.goHome = goHome;
+window.goCount = goCount;
+window.goSettings = goSettings;
+window.startNew = startNew;
+window.openSession = openSession;
+window.setLength = setLength;
+window.tap = tap;
+window.untap = untap;
+window.openInfo = openInfo;
+window.closeInfo = closeInfo;
+window.saveInfo = saveInfo;
+window.deleteCurrent = deleteCurrent;
+window.exportCSV = exportCSV;
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
+</script>
+
+</body>
+</html>
